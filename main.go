@@ -19,6 +19,15 @@ import (
 //go:embed data/initial.json
 var initialData []byte
 
+func main() {
+	var p program
+	ctx := context.Background()
+	if err := p.run(ctx); err != nil {
+		p.log.LogAttrs(ctx, slog.LevelError, err.Error())
+		os.Exit(1)
+	}
+}
+
 // program is used to initialize the GopherNet application.
 type program struct {
 	log *slog.Logger
@@ -38,7 +47,7 @@ func (p *program) run(ctx context.Context) (err error) {
 	flag.StringVar(&settings.HTTPAddress, "http", "localhost:8080", "HTTP service address to listen for incoming requests on")
 	flag.DurationVar(&settings.UpdateStatusTicker, "update-status-ticker", time.Minute, "Update status ticker interval")
 	flag.DurationVar(&settings.BurrowExpiration, "burrow-expiration", 25*24*time.Hour, "The time after which a burrow is considered expired")
-	flag.IntVar(&settings.NthUpdateReport, "nth-update-report", 10, "Report status on every nth update")
+	flag.DurationVar(&settings.ReportStatusTicker, "report-status-ticker", 10*time.Minute, "Report status ticker interval")
 	flag.Float64Var(&settings.BurrowDigRate, "burrow-dig-rate", 0.9, "The rate at which a gopher digs a burrow (in m/min)")
 	flag.BoolVar(&settings.Verbose, "verbose", false, "Show more information about an operation")
 
@@ -70,9 +79,13 @@ func (p *program) run(ctx context.Context) (err error) {
 		ec <- server.Run(ctx)
 	}()
 
-	// Update the state of the burrows every minute.
+	// Update the state of the burrows every UpdateStatusTicker.
+	go p.api.UpdateStatus(ctx)
+
+	// Report the state of the burrows every ReportStatusTicker.
 	go func() {
-		if err := p.reportStateBurrows(ctx, reportFile); err != nil {
+		// TODO(henvic): handle graceful shutdown gracefully (including closing file to handle flushing).
+		if err := p.reportStatusBurrows(ctx, reportFile); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -116,8 +129,8 @@ func (p *program) loadBurrows(ctx context.Context, filename string, burrows *[]a
 	return nil
 }
 
-// reportStateBurrows saves teh state of the burrows to a file, every minute.
-func (p *program) reportStateBurrows(ctx context.Context, reportFile string) (err error) {
+// reportStatusBurrows saves teh state of the burrows to a file, every minute.
+func (p *program) reportStatusBurrows(ctx context.Context, reportFile string) (err error) {
 	f, err := os.Create(reportFile)
 	if err != nil {
 		return fmt.Errorf("failed to create report file: %w", err)
@@ -127,20 +140,6 @@ func (p *program) reportStateBurrows(ctx context.Context, reportFile string) (er
 			err = err1
 		}
 	}()
-	p.api.UpdateStatus(ctx, func(report api.Report) {
-		_, err = f.WriteString(report.String() + "\n")
-		if err != nil {
-			p.log.Error("failed to write report file: %w", err)
-		}
-	})
+	p.api.ReportStatus(ctx, f)
 	return nil
-}
-
-func main() {
-	var p program
-	ctx := context.Background()
-	if err := p.run(ctx); err != nil {
-		p.log.LogAttrs(ctx, slog.LevelError, err.Error())
-		os.Exit(1)
-	}
 }

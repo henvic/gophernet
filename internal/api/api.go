@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -16,7 +17,7 @@ type Settings struct {
 	HTTPAddress        string
 	UpdateStatusTicker time.Duration
 	BurrowExpiration   time.Duration
-	NthUpdateReport    int
+	ReportStatusTicker time.Duration
 	BurrowDigRate      float64
 	Verbose            bool
 }
@@ -56,8 +57,7 @@ func (a *API) Load(burrows []Burrow) {
 }
 
 // UpdateStatus updates the burrows status.
-// If report function is set, it will also report the status every nth update.
-func (a *API) UpdateStatus(ctx context.Context, reportFn func(Report)) {
+func (a *API) UpdateStatus(ctx context.Context) {
 	if a.settings.UpdateStatusTicker == 0 {
 		panic("update status ticker is not set")
 	}
@@ -65,14 +65,6 @@ func (a *API) UpdateStatus(ctx context.Context, reportFn func(Report)) {
 	ticker := time.NewTicker(a.settings.UpdateStatusTicker)
 	defer ticker.Stop()
 
-	// Initial report.
-	if reportFn != nil {
-		reportFn(a.Report())
-	}
-
-	// Update status continuously at every tick,
-	// and report the status every nth update.
-	var nth int
 	for {
 		select {
 		case <-ctx.Done():
@@ -80,15 +72,27 @@ func (a *API) UpdateStatus(ctx context.Context, reportFn func(Report)) {
 		case <-ticker.C:
 			a.updateStatus()
 		}
+	}
+}
 
-		if reportFn != nil {
-			// On every nth update, report the status.
-			nth %= a.settings.NthUpdateReport
-			if nth == a.settings.NthUpdateReport-1 {
-				reportFn(a.Report())
-			}
-			nth++
+// ReportStatus writes the status of the burrows to a stream.
+func (a *API) ReportStatus(ctx context.Context, w io.Writer) {
+	a.reportStatus(w)
+	ticker := time.NewTicker(a.settings.ReportStatusTicker)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			a.reportStatus(w)
 		}
+	}
+}
+
+func (a *API) reportStatus(w io.Writer) {
+	if _, err := fmt.Fprintln(w, a.Report()); err != nil {
+		a.log.Error("failed to write report file: %w", err)
 	}
 }
 
