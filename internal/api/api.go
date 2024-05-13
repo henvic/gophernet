@@ -15,8 +15,8 @@ import (
 type Settings struct {
 	HTTPAddress        string
 	UpdateStatusTicker time.Duration
+	BurrowExpiration   time.Duration
 	NthUpdateReport    int
-	BurrowExpiration   int
 	BurrowDigRate      float64
 	Verbose            bool
 }
@@ -107,7 +107,7 @@ func (a *API) updateStatus() {
 
 	// Remove burrows that are too old (have collapsed).
 	a.burrows = slices.DeleteFunc(a.burrows, func(b Burrow) bool {
-		return b.Age > a.settings.BurrowExpiration
+		return time.Duration(b.Age)*time.Minute > a.settings.BurrowExpiration
 	})
 
 	a.log.LogAttrs(context.Background(), slog.LevelDebug, "Burrows status updated", slog.Int("burrows", len(a.burrows)))

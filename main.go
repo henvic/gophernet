@@ -37,8 +37,8 @@ func (p *program) run(ctx context.Context) (err error) {
 	flag.StringVar(&reportFile, "report-file", "gophernet-report.txt", "Report output file")
 	flag.StringVar(&settings.HTTPAddress, "http", "localhost:8080", "HTTP service address to listen for incoming requests on")
 	flag.DurationVar(&settings.UpdateStatusTicker, "update-status-ticker", time.Minute, "Update status ticker interval")
+	flag.DurationVar(&settings.BurrowExpiration, "burrow-expiration", 25*24*time.Hour, "The time after which a burrow is considered expired")
 	flag.IntVar(&settings.NthUpdateReport, "nth-update-report", 10, "Report status on every nth update")
-	flag.IntVar(&settings.BurrowExpiration, "burrow-expiration", 25*24*60, "The time after which a burrow is considered expired (in minutes)")
 	flag.Float64Var(&settings.BurrowDigRate, "burrow-dig-rate", 0.9, "The rate at which a gopher digs a burrow (in m/min)")
 	flag.BoolVar(&settings.Verbose, "verbose", false, "Show more information about an operation")
 
