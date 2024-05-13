@@ -1,0 +1,37 @@
+[
+        {
+                "name": "The Underground Palace",
+                "depth": 2.5,
+                "width": 1.2,
+                "occupied": true,
+                "age": 10
+        },
+        {
+                "name": "Tunnel of Mystery",
+                "depth": 1.8,
+                "width": 1.1,
+                "occupied": false,
+                "age": 30
+        },
+        {
+                "name": "The Molehole",
+                "depth": 3.0,
+                "width": 1.3,
+                "occupied": true,
+                "age": 50
+        },
+        {
+                "name": "The Deep Den",
+                "depth": 2.2,
+                "width": 1.2,
+                "occupied": false,
+                "age": 40
+        },
+        {
+                "name": "Surface Level Statis",
+                "depth": 0,
+                "width": 1.3,
+                "occupied": true,
+                "age": 5
+        }
+]
