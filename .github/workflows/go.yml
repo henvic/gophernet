@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        go: [1.22.x] # when updating versions, update it below too.
+    runs-on: ${{ matrix.os }}
+    name: Test
+    steps:
+
+    - name: Set up Go ${{ matrix.go }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Test
+      run: go test -race -covermode atomic -coverprofile=profile.cov ./...
